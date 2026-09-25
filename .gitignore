@@ -1,0 +1,6 @@
+# 実機から取得したパラメータファイルは公開しない（車体外形と調整値を含むため）
+safe_run_config.remote.json
+safe_run_config.*.json
+*.tuned.json
+
+.DS_Store

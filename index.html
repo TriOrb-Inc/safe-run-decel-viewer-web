@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>safe_run 減速範囲ビューア</title>
+<style>
+:root{
+  --bg:#dcdce0; --panel:#e9e9ed; --box:#d2d2d9; --border:#bcbcc6;
+  --text:#1e1e22; --sub:#4a4a52; --dim:#76767e;
+  --track:#c4c4cd; --accent:#1668c8; --accent-dk:#0b4a94;
+  --robot:#c46000; --arrow:#0084dc; --err:#c0392b; --err-bg:#fdecea;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font:13px/1.5 "Hiragino Sans","Yu Gothic","Noto Sans CJK JP",sans-serif;
+  overflow:hidden;
+}
+#app{display:flex;gap:16px;padding:12px;height:100vh;align-items:flex-start}
+#left{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px;height:100%;align-items:center}
+#panel{
+  flex:0 0 430px;background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:12px 14px;height:100%;overflow-y:auto;
+}
+h2,h3{margin:0;font-size:13px;font-weight:600}
+h3{margin-top:10px}
+canvas{display:block;background:var(--bg);border:1px solid var(--border);border-radius:4px}
+
+/* 小窓 */
+#thumbs{display:flex;gap:10px;justify-content:center}
+#thumbs[hidden]{display:none}   /* display 指定が hidden 属性を打ち消すので明示する */
+#thumbs figure{margin:0;display:flex;flex-direction:column;gap:2px}
+#thumbs figcaption{font-size:11px;color:var(--sub);text-align:center}
+#thumbs .ttl{font-size:11px;color:var(--text)}
+
+/* 凡例 */
+#legend{display:flex;align-items:center;justify-content:center;gap:10px;font-size:11px;color:var(--dim);flex-wrap:wrap}
+#bar{width:200px;height:12px;border:1px solid var(--border);
+  background:linear-gradient(to right,#440154,#3b528b,#21918c,#5ec962,#fde725)}
+.swatch{display:inline-block;width:11px;height:11px;vertical-align:-1px;border:1px solid var(--border)}
+
+/* パネル */
+#cfgbar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)}
+#cfgbar button{padding:2px 8px;font-size:11px}
+#cfgName{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#cfgInfo{font-size:11px;color:var(--dim);margin:4px 0 8px;line-height:1.4}
+.row{margin-bottom:7px}
+.row .head{display:flex;align-items:baseline;gap:8px}
+.row .nm{font-size:12px}
+.row .ds{font-size:11px;color:var(--dim);flex:1 1 auto;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.row .rng{font-size:10px;color:var(--dim);white-space:nowrap}
+.row .ctl{display:flex;align-items:center;gap:8px;margin-top:1px}
+input[type=range]{flex:1 1 auto;min-width:0;accent-color:var(--accent)}
+input[type=number]{width:78px;text-align:right;font:inherit;font-size:12px;
+  padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:#fff}
+.unit{font-size:11px;color:var(--dim);width:42px}
+button,select{font:inherit;font-size:12px;padding:3px 10px;border:1px solid var(--border);
+  border-radius:4px;background:#fff;color:var(--text);cursor:pointer}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.on{background:var(--accent);border-color:var(--accent-dk);color:#fff}
+#modelBtn{width:100%;margin:7px 0;padding:5px}
+#opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+#readout{background:var(--box);border:1px solid var(--border);border-radius:6px;
+  padding:9px 12px;margin-top:10px;position:sticky;bottom:-12px;z-index:2}
+#readout .big{font-size:13px;font-weight:600}
+#readout .sm{font-size:11px;color:var(--sub);margin-top:3px}
+#readout .dim{font-size:11px;color:var(--dim);margin-top:3px}
+#note{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.45}
+
+/* トースト・失敗表示 */
+#toast{position:fixed;left:24px;bottom:20px;background:var(--box);border:1px solid var(--border);
+  border-radius:4px;padding:6px 12px;font-size:12px;display:none;z-index:5}
+#err{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
+  align-items:center;justify-content:center;z-index:10}
+#errBox{background:var(--err-bg);border:3px solid var(--err);border-radius:10px;
+  padding:28px 36px;max-width:760px;text-align:center}
+#errBox h1{color:var(--err);font-size:30px;margin:0 0 18px}
+#errBox p{margin:6px 0;font-size:15px}
+#errBox .hint{font-size:11px;color:var(--dim);margin-top:18px}
+
+dialog{border:1px solid var(--border);border-radius:8px;background:var(--panel);
+  color:var(--text);max-width:640px;padding:20px 24px}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog table{border-collapse:collapse;font-size:12px}
+dialog td{padding:2px 10px 2px 0;vertical-align:top}
+dialog td:first-child{color:var(--text);white-space:nowrap}
+dialog td:last-child{color:var(--sub)}
+#dropHint{position:fixed;inset:0;border:3px dashed var(--accent);background:rgba(22,104,200,.08);
+  display:none;align-items:center;justify-content:center;font-size:20px;color:var(--accent);z-index:8}
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="left">
+    <div id="thumbs" hidden></div>
+    <h2 id="mapTitle"></h2>
+    <canvas id="map"></canvas>
+    <div id="legend">
+      <span>0.0</span><div id="bar"></div><span>1.0</span>
+      <span>小さいほど減速</span>
+      <span><span class="swatch" style="background:#fff"></span> 白 = しきい値</span>
+      <span><span class="swatch" style="background:rgba(255,59,48,.55)"></span> 赤 = ここに障害物が触れると実質停止（指令の <span id="stopPct"></span>% 以下）</span>
+      <span><span class="swatch" style="background:#dcdce0"></span> 灰 = 障害物を置けない範囲（自機と接触）</span>
+      <span id="axis"></span>
+    </div>
+  </section>
+
+  <aside id="panel">
+    <div id="cfgbar">
+      <span>config:</span><span id="cfgName">-</span>
+      <button id="openBtn">開く</button>
+      <button id="saveBtn">保存</button>
+      <button id="helpBtn">操作</button>
+    </div>
+    <div id="cfgInfo"></div>
+    <div id="tuning"></div>
+    <h3>表示条件</h3>
+    <div id="disp"></div>
+    <div id="opts">
+      <label>メトリック
+        <select id="metric">
+          <option value="0">ratio_speed</option>
+          <option value="1">ratio_vx</option>
+          <option value="2">ratio_vw</option>
+          <option value="3">decel_flag</option>
+        </select>
+      </label>
+      <button id="thumbBtn"></button>
+      <button id="contourBtn"></button>
+      <button id="filtBtn"></button>
+      <button id="swapBtn"></button>
+      <button id="basisBtn"></button>
+      <button id="resetBtn">config に戻す</button>
+    </div>
+    <button id="modelBtn"></button>
+    <div id="readout">
+      <div class="big" id="roMain"></div>
+      <div class="sm" id="roSub"></div>
+      <div class="sm" id="roMin"></div>
+      <div class="dim" id="roPerf"></div>
+    </div>
+    <div id="note"></div>
+  </aside>
+</div>
+
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
+<div id="toast"></div>
+<div id="err"><div id="errBox">
+  <h1>読み込みに失敗しました</h1>
+  <p id="errHead"></p><p id="errBody"></p>
+  <p class="hint">設定は変更していません。クリックか任意のキーで閉じます。</p>
+</div></div>
+<div id="dropHint">パラメータファイル (JSON) をドロップ</div>
+
+<dialog id="help">
+  <h2 style="margin:0 0 12px">操作</h2>
+  <table>
+    <tr><td>スライダ / 数値欄</td><td>パラメータを変える。数値欄は直接入力と ↑↓ キーで 0.01 刻み</td></tr>
+    <tr><td>開く / ドロップ</td><td>別のパラメータファイル (JSON) を読み込む</td></tr>
+    <tr><td>保存</td><td>チューニングした 5 つを &lt;名前&gt;.tuned.json として保存</td></tr>
+    <tr><td>小窓</td><td>0.1 / 0.3 / 0.6 m/s の比較を出す。消すとメインマップが広がり計算も軽くなる</td></tr>
+    <tr><td>障害物モデル</td><td>物体（占有セル群・実機と同じ合算）/ 単一点（Python 版と一致）</td></tr>
+    <tr><td>白線</td><td>しきい値の等高線。ここから減速が始まる</td></tr>
+    <tr><td>赤塗り</td><td>safe_run の出力が指令の 5% 以下になる範囲</td></tr>
+  </table>
+  <p style="font-size:11px;color:var(--dim);line-height:1.5">
+    ※ 実機の保護停止は SLS（セーフティスキャナ）側の設定によるもので、この図には含まれません。
+    SLS には別に Speed down ゾーンもあるため、実機で減速を観測したときは
+    safe_run と SLS のどちらが効いたのかを先に切り分けてください。安全距離の根拠には使えません。
+  </p>
+  <div style="text-align:right;margin-top:14px"><button id="helpClose">閉じる</button></div>
+</dialog>
+
+<script src="default_config.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
