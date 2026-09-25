@@ -34,6 +34,8 @@ canvas{display:block;background:var(--bg);border:1px solid var(--border);border-
 #thumbs figure{margin:0;display:flex;flex-direction:column;gap:2px}
 #thumbs figcaption{font-size:11px;color:var(--sub);text-align:center}
 #thumbs .ttl{font-size:11px;color:var(--text)}
+#legend a{color:var(--accent);text-decoration:none}
+#legend a:hover{text-decoration:underline}
 
 /* 凡例 */
 #legend{display:flex;align-items:center;justify-content:center;gap:10px;font-size:11px;color:var(--dim);flex-wrap:wrap}
@@ -105,6 +107,8 @@ dialog td:last-child{color:var(--sub)}
       <span><span class="swatch" style="background:rgba(255,59,48,.55)"></span> 赤 = ここに障害物が触れると実質停止（指令の <span id="stopPct"></span>% 以下）</span>
       <span><span class="swatch" style="background:#dcdce0"></span> 灰 = 障害物を置けない範囲（自機と接触）</span>
       <span id="axis"></span>
+      <span><a href="https://github.com/TriOrb-Inc/safe-run-decel-viewer-web"
+         target="_blank" rel="noopener">ソース (MIT)</a></span>
     </div>
   </section>
 
