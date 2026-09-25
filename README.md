@@ -3,8 +3,7 @@
 TriOrb AMR の `safe_run`（障害物に応じて速度を落とす機能）の減速範囲を、
 パラメータを調整しながらリアルタイムに可視化するツールです。
 
-**👉 ブラウザで開く: https://triorb-inc.github.io/safe-run-decel-viewer/**
-（↑ 公開後に実際の URL に差し替えてください）
+**👉 ブラウザで開く: https://triorb-inc.github.io/safe-run-decel-viewer-web/**
 
 インストール不要です。上の URL を開くか、Release の zip を展開して `index.html`
 をダブルクリックしてください。サーバも実行環境も要りません。
